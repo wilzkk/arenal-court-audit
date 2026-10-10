@@ -84,13 +84,43 @@ CREATE INDEX IF NOT EXISTS idx_events_type ON events(type, club_id);
 
 
 # ---------------------------------------------------------------- fetching
-def fetch_day(date_str):
-    """Return the parsed JSON for one date, all configured clubs in one call."""
-    ids = ",".join(str(c) for c in CLUBS)
-    url = API_URL.format(date=date_str, ids=ids, sport=SPORT)
+def _get_json(url):
     req = urllib.request.Request(url, headers=HEADERS)
     with urllib.request.urlopen(req, timeout=60) as resp:
         return json.loads(resp.read().decode("utf-8"))
+
+
+def fetch_day(date_str):
+    """
+    Return {"data": [...]} for one date with every club in CLUBS that the API returned.
+    The API does not always return all requested clubs in one answer, so missing
+    clubs are asked for again (and pagination links followed) until all are in
+    or a round brings nothing new. Clubs still missing are simply absent; the
+    caller must treat them as "not fetched", never as "fully booked".
+    """
+    remaining, data = set(CLUBS), []
+    for _ in range(len(CLUBS) + 1):
+        if not remaining:
+            break
+        ids = ",".join(str(c) for c in sorted(remaining))
+        url = API_URL.format(date=date_str, ids=ids, sport=SPORT)
+        got = set()
+        for _page in range(20):
+            page = _get_json(url)
+            for club in page.get("data", []):
+                if club.get("id") in remaining and club.get("id") not in got:
+                    data.append(club)
+                    got.add(club["id"])
+            url = (page.get("links") or {}).get("next")
+            if not url:
+                break
+            time.sleep(REQUEST_PAUSE_SEC)
+        if not got:
+            break
+        remaining -= got
+        if remaining:
+            time.sleep(REQUEST_PAUSE_SEC)
+    return {"data": data}
 
 
 def fetch_clubs():
@@ -227,11 +257,16 @@ def run_once(conn, now=None, fetch=fetch_day, fetch_courts_fn=fetch_courts,
 
     # 2. Fetch current availability, date by date.
     dates = [(now + timedelta(days=d)).date().isoformat() for d in range(DAYS_AHEAD)]
-    current, fetched_dates, errors = set(), [], []
+    current, fetched, errors = set(), {}, []   # fetched: date -> club ids actually received
     for i, d in enumerate(dates):
         try:
-            current |= blocks_from_payload(fetch(d), skip)
-            fetched_dates.append(d)
+            payload = fetch(d)
+            received = {c.get("id") for c in payload.get("data", []) if c.get("id") in CLUBS}
+            current |= blocks_from_payload(payload, skip)
+            fetched[d] = received
+            missing = set(CLUBS) - received
+            if missing:
+                errors.append(f"{d}: clubs not returned {sorted(missing)}")
         except (urllib.error.URLError, ValueError, KeyError, TimeoutError) as e:
             errors.append(f"{d}: {e}")
         if i < len(dates) - 1 and fetch is fetch_day:
@@ -240,9 +275,11 @@ def run_once(conn, now=None, fetch=fetch_day, fetch_courts_fn=fetch_courts,
     # Only consider future blocks (the API may still list a slot that started a minute ago).
     current = {b for b in current if datetime.fromisoformat(b[2]) > now}
 
-    # 3. Diff per successfully fetched date.
+    # 3. Diff per date, only for clubs the API actually returned for that date.
+    #    A club missing from the answer is "not fetched", never "fully booked".
+    fetched_dates = [d for d in dates if d in fetched]
     for d in fetched_dates:
-        for club_id in CLUBS:
+        for club_id in sorted(fetched[d]):
             new_date = cur.execute(
                 "SELECT 1 FROM seen_dates WHERE club_id=? AND date=?", (club_id, d)
             ).fetchone() is None
