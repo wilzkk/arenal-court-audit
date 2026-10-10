@@ -1,0 +1,43 @@
+name: track-courts
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may delay runs a few minutes)
+  workflow_dispatch:
+
+concurrency:
+  group: track-courts
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AUDIT_STOP: "2026-10-24T12:00"   # two weeks after the start; runs after this do nothing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore saved data
+        run: python3 persist.py load
+
+      - name: Check court availability
+        run: python3 tracker.py
+
+      - name: Update report
+        if: always()
+        run: python3 report.py
+
+      - name: Save data and report
+        if: always()
+        run: |
+          python3 persist.py dump
+          git config user.name "court-audit-bot"
+          git config user.email "court-audit-bot@users.noreply.github.com"
+          git add data/audit.sql report.html
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git commit -q -m "check $(date -u +%Y-%m-%dT%H:%MZ)"
+          git pull -q --rebase && git push -q
