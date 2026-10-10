@@ -4,7 +4,7 @@ Tracks public padel court availability at Arenal Meise and Arenal Grimbergen for
 
 ## Current setup: runs on GitHub
 
-This repo runs itself: `.github/workflows/track.yml` runs `loop.sh`, which checks availability every 15 minutes for about 5h40m and then starts the next run, until 24 Oct 2026 12:00 (`AUDIT_STOP`). An hourly schedule restarts the chain if it ever breaks. Data is saved to `data/audit.sql` and `report.html` is refreshed after every check. Public repo, so GitHub Actions minutes are free. Nothing needs to run on your computer. The steps below are only needed to run it yourself instead.
+This repo runs itself: `.github/workflows/track.yml` runs `loop.sh`, which checks availability every 15 minutes for about 5h40m and then starts the next run, until 24 Oct 2026 12:00 (`AUDIT_STOP`). An hourly schedule restarts the chain if it ever breaks. It tracks every Arenal club with padel (the list is read from Arenal once a day), indoor courts only. Data stays on the runner between checks and is saved to `data/audit.sql`, with `report.html` refreshed, every hour, which keeps the repo small. Public repo, so GitHub Actions minutes are free. Nothing needs to run on your computer. The steps below are only needed to run it yourself instead.
 
 ## Files
 

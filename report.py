@@ -247,7 +247,31 @@ def write_html(res, cov, path):
                    f"({days:.1f} days, {cov['n']} checks, {cov['failed']} with errors, "
                    f"{len(cov['gaps'])} gaps over 30 min)")
 
-    body = "".join(club_card(m) for m in res.values())
+    def rebook(m):
+        done = m["refilled"] + m["cancel_lost"]
+        return f"{m['refilled'] / done * 100:.0f}%" if done else "n/a"
+
+    ranked = sorted(res.values(), key=lambda m: -(m["empty_peak_eur"] + m["cancel_lost_eur"]))
+    mult = per_month or 1
+    unit = "per month (projected)" if per_month else "so far"
+    overview_rows = "".join(
+        f"<tr><td>{esc(m['name'])}</td><td>{m['courts']}</td>"
+        f"<td>{eur(m['empty_peak_eur'] * mult)}</td><td>{eur(m['cancel_lost_eur'] * mult)}</td>"
+        f"<td>{hours(m['opened']):.0f} h</td><td>{rebook(m)}</td></tr>"
+        for m in ranked)
+    tot_peak = sum(m["empty_peak_eur"] for m in ranked) * mult
+    tot_cancel = sum(m["cancel_lost_eur"] for m in ranked) * mult
+    overview = f"""
+<section class="card">
+  <h2>All clubs <span class="muted">ranked by lost revenue, {unit}</span></h2>
+  <div class="scroll"><table>
+    <tr><th>Club</th><th>Indoor courts</th><th>Empty peak time</th><th>Cancelled, never rebooked</th><th>Cancellations</th><th>Rebook rate</th></tr>
+    {overview_rows}
+    <tr><th>Total</th><th>{sum(m['courts'] for m in ranked)}</th><th>{eur(tot_peak)}</th><th>{eur(tot_cancel)}</th><th>{hours(sum(m['opened'] for m in ranked)):.0f} h</th><th></th></tr>
+  </table></div>
+</section>""" if len(ranked) > 1 else ""
+
+    body = overview + "".join(club_card(m) for m in ranked)
     page = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -265,6 +289,7 @@ h1 {{ margin:0 0 4px; font-size:26px; }} h2 {{ margin:0 0 12px; font-size:20px; 
 .kpi .label {{ color:var(--muted); font-size:13px; }} .kpi .value {{ font-size:24px; font-weight:700; }} .kpi .sub {{ color:var(--accent); font-size:14px; font-weight:600; }}
 .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }}
 table {{ width:100%; border-collapse:collapse; font-size:14px; }} th, td {{ text-align:left; padding:6px 4px; border-bottom:1px solid var(--line); }} th {{ color:var(--muted); font-weight:600; }}
+.scroll {{ overflow-x:auto; }}
 .pitch {{ font-size:16px; background:color-mix(in srgb, var(--accent) 10%, transparent); padding:10px 12px; border-radius:8px; }}
 footer {{ color:var(--muted); font-size:13px; }}
 </style></head><body><main>
@@ -273,7 +298,8 @@ footer {{ color:var(--muted); font-size:13px; }}
 {body}
 <footer><p>Method: public availability checked every 10 minutes. "Cancelled" means court time that was booked and became bookable again.
 "Empty" means court time still unbooked when it started. Indoor courts only; outdoor courts are excluded.
-Values use Meise's published indoor doubles rates for 4 players (peak EUR 32/h, off-peak EUR 20/h).
+Values use Meise's published indoor doubles rates for 4 players (peak EUR 32/h, off-peak EUR 20/h) for every club,
+so euro figures for other clubs are estimates; the hours are exact.
 Cancellations rebooked between two checks are not visible, so the rebook rate is a lower bound.</p></footer>
 </main></body></html>"""
     path.write_text(page, encoding="utf-8")

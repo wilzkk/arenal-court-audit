@@ -27,7 +27,11 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 # ---------------------------------------------------------------- config
+# Clubs to track. TRACK_ALL_CLUBS reads the full list from Arenal once a day
+# (every club offering padel); CLUBS is the fallback if that list can't be fetched.
+TRACK_ALL_CLUBS = True
 CLUBS = {5: "Meise", 3: "Grimbergen"}
+CLUBS_URL = "https://api.arenal.be/api/clubs"
 SPORT = "padel"
 DAYS_AHEAD = 14                     # how many days ahead to track (incl. today)
 REQUEST_PAUSE_SEC = 1.5             # be polite to their API
@@ -38,8 +42,12 @@ COURTS_URL = "https://api.arenal.be/api/courts"
 # Dutch "Binnen" / "Overdekt" / "Buiten", English "Indoor" / "Covered" / "Outdoor".
 EXCLUDE_ENVIRONMENTS = {"buiten", "outdoor", "extérieur", "exterieur"}
 # Used only if the court list can't be fetched and nothing is cached yet
-# (outdoor courts as of Oct 2026: Meise 75, 76, 77; Grimbergen 24).
-FALLBACK_EXCLUDED_COURTS = {24, 75, 76, 77}
+# (all Arenal outdoor courts as of 10 Oct 2026, e.g. Meise 75-77, Grimbergen 24).
+FALLBACK_EXCLUDED_COURTS = {
+    12, 13, 14, 15, 24, 25, 26, 27, 28, 36, 37, 50, 51, 52, 53, 75, 76, 77,
+    103, 104, 105, 106, 111, 112, 113, 114, 115, 116, 130, 131, 132, 133, 134,
+    135, 136, 163, 164, 165, 168, 169, 172, 173,
+}
 COURTS_REFRESH = timedelta(hours=24)
 TZ = ZoneInfo("Europe/Brussels")
 BLOCK = timedelta(minutes=30)
@@ -67,6 +75,7 @@ CREATE TABLE IF NOT EXISTS runs (
     run_at TEXT, ok INTEGER, dates_fetched INTEGER, free_blocks INTEGER, note TEXT
 );
 CREATE TABLE IF NOT EXISTS clubs (club_id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE IF NOT EXISTS courts (
     court_id INTEGER PRIMARY KEY, name TEXT, environment TEXT, fetched_at TEXT
 );
@@ -80,8 +89,45 @@ def fetch_day(date_str):
     ids = ",".join(str(c) for c in CLUBS)
     url = API_URL.format(date=date_str, ids=ids, sport=SPORT)
     req = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=20) as resp:
+    with urllib.request.urlopen(req, timeout=60) as resp:
         return json.loads(resp.read().decode("utf-8"))
+
+
+def fetch_clubs():
+    """Return {club_id: name} for every Arenal club that offers the tracked sport."""
+    req = urllib.request.Request(CLUBS_URL, headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8")).get("data", [])
+    return {c["id"]: c["name"] for c in data if SPORT in (c.get("sports") or [])}
+
+
+def refresh_clubs(conn, now, fetch_clubs_fn=fetch_clubs):
+    """Update the global CLUBS from Arenal's club list, refreshed once a day, cached in the db."""
+    global CLUBS
+    cur = conn.cursor()
+    if TRACK_ALL_CLUBS:
+        last = cur.execute("SELECT value FROM meta WHERE key='clubs_fetched_at'").fetchone()
+        stale = last is None or now - datetime.fromisoformat(last[0]) > COURTS_REFRESH
+        if stale:
+            try:
+                clubs = fetch_clubs_fn()
+                if clubs:
+                    cur.executemany("INSERT OR REPLACE INTO clubs VALUES (?, ?)", clubs.items())
+                    cur.execute("INSERT OR REPLACE INTO meta VALUES ('clubs_fetched_at', ?)",
+                                (now.isoformat(),))
+                    cur.execute("INSERT OR REPLACE INTO meta VALUES ('club_ids', ?)",
+                                (",".join(str(i) for i in sorted(clubs)),))
+                    conn.commit()
+            except (urllib.error.URLError, ValueError, KeyError, TimeoutError) as e:
+                print(f"  warning: could not refresh club list ({e})", file=sys.stderr)
+        ids = cur.execute("SELECT value FROM meta WHERE key='club_ids'").fetchone()
+        if ids:
+            wanted = {int(i) for i in ids[0].split(",") if i}
+            names = dict(cur.execute("SELECT club_id, name FROM clubs"))
+            CLUBS = {i: names.get(i, str(i)) for i in sorted(wanted)}
+    for cid, name in CLUBS.items():
+        cur.execute("INSERT OR REPLACE INTO clubs VALUES (?, ?)", (cid, name))
+    return CLUBS
 
 
 def fetch_courts():
@@ -147,13 +193,13 @@ def blocks_from_payload(payload, skip_courts=frozenset()):
 
 
 # ---------------------------------------------------------------- core logic
-def run_once(conn, now=None, fetch=fetch_day, fetch_courts_fn=fetch_courts):
+def run_once(conn, now=None, fetch=fetch_day, fetch_courts_fn=fetch_courts,
+             fetch_clubs_fn=fetch_clubs):
     now = now or datetime.now(TZ)
     now_iso = now.isoformat()
     cur = conn.cursor()
 
-    for cid, name in CLUBS.items():
-        cur.execute("INSERT OR REPLACE INTO clubs VALUES (?, ?)", (cid, name))
+    refresh_clubs(conn, now, fetch_clubs_fn)
 
     # 0. Skip outdoor courts, and drop anything already recorded for them
     #    (e.g. from runs before this filter existed).
