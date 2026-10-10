@@ -2,7 +2,7 @@ name: track-courts
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may delay runs a few minutes)
+    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may delay runs by a few minutes)
   workflow_dispatch:
 
 concurrency:
