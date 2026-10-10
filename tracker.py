@@ -21,6 +21,7 @@ import sqlite3
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -92,35 +93,30 @@ def _get_json(url):
 
 def fetch_day(date_str):
     """
-    Return {"data": [...]} for one date with every club in CLUBS that the API returned.
-    The API does not always return all requested clubs in one answer, so missing
-    clubs are asked for again (and pagination links followed) until all are in
-    or a round brings nothing new. Clubs still missing are simply absent; the
-    caller must treat them as "not fetched", never as "fully booked".
+    Return {"data": [...], "complete": True} for one date.
+
+    The API pages its answer (5 clubs per page, cursor-based) and leaves out clubs
+    that have no free slots left on that date. Its own "next" link drops the date
+    and sport parameters (and then fails with HTTP 422), so the next page is
+    requested by adding the cursor to the original URL. Only when every page was
+    read is the answer "complete": then a club that is absent really has no free
+    court time. If any page fails, an exception is raised and the date is skipped.
     """
-    remaining, data = set(CLUBS), []
-    for _ in range(len(CLUBS) + 1):
-        if not remaining:
-            break
-        ids = ",".join(str(c) for c in sorted(remaining))
-        url = API_URL.format(date=date_str, ids=ids, sport=SPORT)
-        got = set()
-        for _page in range(20):
-            page = _get_json(url)
-            for club in page.get("data", []):
-                if club.get("id") in remaining and club.get("id") not in got:
-                    data.append(club)
-                    got.add(club["id"])
-            url = (page.get("links") or {}).get("next")
-            if not url:
-                break
-            time.sleep(REQUEST_PAUSE_SEC)
-        if not got:
-            break
-        remaining -= got
-        if remaining:
-            time.sleep(REQUEST_PAUSE_SEC)
-    return {"data": data}
+    ids = ",".join(str(c) for c in sorted(CLUBS))
+    base = API_URL.format(date=date_str, ids=ids, sport=SPORT)
+    url, data, seen = base, [], set()
+    for _page in range(50):
+        page = _get_json(url)
+        for club in page.get("data", []):
+            if club.get("id") in CLUBS and club["id"] not in seen:
+                data.append(club)
+                seen.add(club["id"])
+        cursor = (page.get("meta") or {}).get("next_cursor")
+        if not cursor:
+            return {"data": data, "complete": True}
+        url = base + "&cursor=" + urllib.parse.quote(cursor)
+        time.sleep(REQUEST_PAUSE_SEC)
+    raise ValueError("too many pages")
 
 
 def fetch_clubs():
@@ -261,12 +257,13 @@ def run_once(conn, now=None, fetch=fetch_day, fetch_courts_fn=fetch_courts,
     for i, d in enumerate(dates):
         try:
             payload = fetch(d)
-            received = {c.get("id") for c in payload.get("data", []) if c.get("id") in CLUBS}
             current |= blocks_from_payload(payload, skip)
-            fetched[d] = received
-            missing = set(CLUBS) - received
-            if missing:
-                errors.append(f"{d}: clubs not returned {sorted(missing)}")
+            if payload.get("complete"):
+                # Full answer: clubs left out have no free court time that day.
+                fetched[d] = set(CLUBS)
+            else:
+                # Partial answer: only clubs actually returned can be compared.
+                fetched[d] = {c.get("id") for c in payload.get("data", []) if c.get("id") in CLUBS}
         except (urllib.error.URLError, ValueError, KeyError, TimeoutError) as e:
             errors.append(f"{d}: {e}")
         if i < len(dates) - 1 and fetch is fetch_day:
