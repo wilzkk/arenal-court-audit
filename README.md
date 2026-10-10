@@ -2,6 +2,10 @@
 
 Tracks public padel court availability at Arenal Meise and Arenal Grimbergen for two weeks and turns it into euro figures: cancelled court time that never got rebooked, and peak court time that stayed empty.
 
+## Current setup: runs on GitHub
+
+This repo runs itself: `.github/workflows/track.yml` checks availability every 15 minutes until 24 Oct 2026 12:00 (`AUDIT_STOP`), saves the data to `data/audit.sql` and refreshes `report.html` after every check. Nothing needs to run on your computer. The steps below are only needed to run it yourself instead.
+
 ## Files
 
 - `tracker.py` checks availability (next 14 days, both clubs) and logs changes to `arenal_audit.db`. Run it every 10 minutes.
@@ -42,7 +46,7 @@ Open `report.html`. Projections per month appear once there are 3+ days of data.
 
 ## How it counts
 
-- **Indoor courts only.** Once a day the tracker reads Arenal's court list and skips every court marked "Buiten" (outdoor): currently Meise courts 6, 7, 8 and Grimbergen court 6 (Joma). That leaves 5 indoor courts in Meise and 6 in Grimbergen. To also skip covered courts, add `"Overdekt"` to `EXCLUDE_ENVIRONMENTS` in `tracker.py`. If you already ran an earlier version, outdoor data in the database is removed automatically on the next run.
+- **Indoor courts only.** Once a day the tracker reads Arenal's court list and skips every court marked outdoor ("Outdoor" / "Buiten"): currently Meise courts 6, 7, 8 and Grimbergen court 6 (Joma). That leaves 5 indoor courts in Meise and 6 in Grimbergen. To also skip covered courts, add `"covered"` and `"overdekt"` to `EXCLUDE_ENVIRONMENTS` in `tracker.py`. If you already ran an earlier version, outdoor data in the database is removed automatically on the next run.
 - Availability is stored as free 30-minute blocks per court (only time that can actually be booked, so small gaps between bookings don't count).
 - **opened**: court time that was booked became free again, i.e. a cancellation.
 - **booked**: free court time got booked.

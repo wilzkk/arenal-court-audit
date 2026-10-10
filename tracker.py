@@ -34,8 +34,9 @@ REQUEST_PAUSE_SEC = 1.5             # be polite to their API
 DB_PATH = Path(__file__).with_name("arenal_audit.db")
 API_URL = "https://api.arenal.be/api/bookable-clubs?date={date}&ids={ids}&sport={sport}"
 COURTS_URL = "https://api.arenal.be/api/courts"
-# Court environments Arenal uses: "Binnen" (indoor), "Overdekt" (covered), "Buiten" (outdoor).
-EXCLUDE_ENVIRONMENTS = {"Buiten"}
+# Court environments Arenal uses. The API answers in the caller's language:
+# Dutch "Binnen" / "Overdekt" / "Buiten", English "Indoor" / "Covered" / "Outdoor".
+EXCLUDE_ENVIRONMENTS = {"buiten", "outdoor", "extérieur", "exterieur"}
 # Used only if the court list can't be fetched and nothing is cached yet
 # (outdoor courts as of Oct 2026: Meise 75, 76, 77; Grimbergen 24).
 FALLBACK_EXCLUDED_COURTS = {24, 75, 76, 77}
@@ -118,7 +119,7 @@ def excluded_courts(conn, now, fetch_courts_fn=fetch_courts):
     rows = cur.execute("SELECT court_id, environment FROM courts").fetchall()
     if not rows:
         return set(FALLBACK_EXCLUDED_COURTS)
-    return {cid for cid, env in rows if env in EXCLUDE_ENVIRONMENTS}
+    return {cid for cid, env in rows if (env or "").strip().lower() in EXCLUDE_ENVIRONMENTS}
 
 
 def blocks_from_payload(payload, skip_courts=frozenset()):
