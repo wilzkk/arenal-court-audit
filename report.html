@@ -15,12 +15,35 @@ h1 { margin:0 0 4px; font-size:26px; } h2 { margin:0 0 12px; font-size:20px; } h
 .kpi .label { color:var(--muted); font-size:13px; } .kpi .value { font-size:24px; font-weight:700; } .kpi .sub { color:var(--accent); font-size:14px; font-weight:600; }
 .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
 table { width:100%; border-collapse:collapse; font-size:14px; } th, td { text-align:left; padding:6px 4px; border-bottom:1px solid var(--line); } th { color:var(--muted); font-weight:600; }
+.scroll { overflow-x:auto; }
 .pitch { font-size:16px; background:color-mix(in srgb, var(--accent) 10%, transparent); padding:10px 12px; border-radius:8px; }
 footer { color:var(--muted); font-size:13px; }
 </style></head><body><main>
 <h1>Empty court audit</h1>
-<div class="muted">Tracked: 10 Oct 14:57 to 10 Oct 22:05 (0.3 days, 23 checks, 0 with errors, 1 gaps over 30 min)</div>
+<div class="muted">Tracked: 10 Oct 14:57 to 10 Oct 22:18 (0.3 days, 24 checks, 0 with errors, 1 gaps over 30 min)</div>
 
+<section class="card">
+  <h2>All clubs <span class="muted">ranked by lost revenue, so far</span></h2>
+  <div class="scroll"><table>
+    <tr><th>Club</th><th>Indoor courts</th><th>Empty peak time</th><th>Cancelled, never rebooked</th><th>Cancellations</th><th>Rebook rate</th></tr>
+    <tr><td>Meise</td><td>5</td><td>EUR 304</td><td>EUR 0</td><td>8 h</td><td>100%</td></tr><tr><td>Grimbergen</td><td>6</td><td>EUR 96</td><td>EUR 0</td><td>5 h</td><td>100%</td></tr><tr><td>Verrebroek</td><td>0</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Brugge</td><td>8</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Mechelen</td><td>0</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Waregem</td><td>0</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Hoogerheide</td><td>7</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Kerkrade</td><td>0</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Lommel</td><td>0</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Bree</td><td>6</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Roeselare</td><td>0</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Terneuzen</td><td>7</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Antwerpen</td><td>8</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr><tr><td>Knokke</td><td>0</td><td>EUR 0</td><td>EUR 0</td><td>0 h</td><td>n/a</td></tr>
+    <tr><th>Total</th><th>47</th><th>EUR 400</th><th>EUR 0</th><th>14 h</th><th></th></tr>
+  </table></div>
+</section>
+<section class="card">
+  <h2>Arenal Meise <span class="muted">5 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">10 h</div><div class="sub">EUR 304</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">100%</div><div class="sub">median 134 min</div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">26 h</div><div class="sub">EUR 644</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td>8 - 24 h</td><td>5.5 h</td></tr><tr><td>&gt; 24 h</td><td>3.0 h</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td>Sat</td><td>9.5 h</td><td>17.0 h</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td>Sat 16:00-17:00</td><td>4.0 h</td></tr><tr><td>Sat 15:00-16:00</td><td>3.0 h</td></tr><tr><td>Sat 17:00-18:00</td><td>2.5 h</td></tr></table></div>
+  </div>
+</section>
 <section class="card">
   <h2>Arenal Grimbergen <span class="muted">6 indoor courts</span></h2>
   
@@ -36,21 +59,176 @@ footer { color:var(--muted); font-size:13px; }
   </div>
 </section>
 <section class="card">
-  <h2>Arenal Meise <span class="muted">5 indoor courts</span></h2>
+  <h2>Arenal Verrebroek <span class="muted">0 indoor courts</span></h2>
   
-  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">10 h</div><div class="sub">EUR 304</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">100%</div><div class="sub">median 75 min</div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">26 h</div><div class="sub">EUR 644</div></div></div>
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
   <div class="grid">
     <div><h3>When cancellations happen</h3>
-      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td>8 - 24 h</td><td>5.5 h</td></tr><tr><td>&gt; 24 h</td><td>3.0 h</td></tr></table>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
       </div>
     <div><h3>Empty court time by day</h3>
-      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td>Sat</td><td>9.5 h</td><td>17.0 h</td></tr></table></div>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
     <div><h3>Most often empty peak hours</h3>
-      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td>Sat 16:00-17:00</td><td>4.0 h</td></tr><tr><td>Sat 15:00-16:00</td><td>3.0 h</td></tr><tr><td>Sat 17:00-18:00</td><td>2.5 h</td></tr></table></div>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Brugge <span class="muted">8 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Mechelen <span class="muted">0 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Waregem <span class="muted">0 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Hoogerheide <span class="muted">7 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Kerkrade <span class="muted">0 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Lommel <span class="muted">0 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Bree <span class="muted">6 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Roeselare <span class="muted">0 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Terneuzen <span class="muted">7 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Antwerpen <span class="muted">8 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Knokke <span class="muted">0 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
   </div>
 </section>
 <footer><p>Method: public availability checked every 10 minutes. "Cancelled" means court time that was booked and became bookable again.
 "Empty" means court time still unbooked when it started. Indoor courts only; outdoor courts are excluded.
-Values use Meise's published indoor doubles rates for 4 players (peak EUR 32/h, off-peak EUR 20/h).
+Values use Meise's published indoor doubles rates for 4 players (peak EUR 32/h, off-peak EUR 20/h) for every club,
+so euro figures for other clubs are estimates; the hours are exact.
 Cancellations rebooked between two checks are not visible, so the rebook rate is a lower bound.</p></footer>
 </main></body></html>
