@@ -245,10 +245,16 @@ def connect(path=DB_PATH):
     return conn
 
 
-def main():
+def audit_stopped():
     stop = os.environ.get("AUDIT_STOP")  # e.g. 2026-10-24T12:00
-    if stop and datetime.now(TZ) >= datetime.fromisoformat(stop).replace(tzinfo=TZ):
-        print(f"audit period ended ({stop}), not checking")
+    return bool(stop) and datetime.now(TZ) >= datetime.fromisoformat(stop).replace(tzinfo=TZ)
+
+
+def main():
+    if "--stopped" in sys.argv:          # exit 0 if the audit period is over
+        sys.exit(0 if audit_stopped() else 1)
+    if audit_stopped():
+        print(f"audit period ended ({os.environ.get('AUDIT_STOP')}), not checking")
         return
     conn = connect()
     res = run_once(conn)

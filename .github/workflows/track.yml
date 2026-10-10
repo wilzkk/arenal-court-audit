@@ -1,8 +1,10 @@
 name: track-courts
 
+# Each run checks availability every 15 minutes for ~5h40m (GitHub jobs max out at 6 h),
+# then starts the next run itself. The hourly schedule is only a backup in case that chain breaks.
 on:
   schedule:
-    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may delay runs by a few minutes)
+    - cron: "7 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -11,33 +13,26 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 355
     env:
-      AUDIT_STOP: "2026-10-24T12:00"   # two weeks after the start; runs after this do nothing
+      AUDIT_STOP: "2026-10-24T12:00"   # two weeks after the start; nothing runs after this
+      INTERVAL_MIN: "15"
+      LOOP_MINUTES: "340"
     steps:
       - uses: actions/checkout@v4
 
-      - name: Restore saved data
-        run: python3 persist.py load
+      - name: Check every 15 minutes
+        run: bash loop.sh
 
-      - name: Check court availability
-        run: python3 tracker.py
-
-      - name: Update report
+      - name: Start the next run
         if: always()
-        run: python3 report.py
-
-      - name: Save data and report
-        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python3 persist.py dump
-          git config user.name "court-audit-bot"
-          git config user.email "court-audit-bot@users.noreply.github.com"
-          git add data/audit.sql report.html
-          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
-          git commit -q -m "check $(date -u +%Y-%m-%dT%H:%MZ)"
-          git pull -q --rebase && git push -q
+          if python3 tracker.py --stopped; then echo "audit over, not chaining"; exit 0; fi
+          gh api -X POST "repos/${{ github.repository }}/actions/workflows/track.yml/dispatches" -f ref=main
