@@ -29,7 +29,7 @@ It needs a machine that stays on. A laptop that sleeps will leave gaps (the repo
 **Linux server / Mac (cron):** run `crontab -e` and add (adjust the path):
 
 ```
-*/10 * * * * cd /home/william/arenal-audit && /usr/bin/python3 tracker.py >> tracker.log 2>&1
+*/10 * * * * cd /path/to/arenal-audit && /usr/bin/python3 tracker.py >> tracker.log 2>&1
 ```
 
 **Windows (Task Scheduler):** create a basic task, trigger daily, then in its properties set "Repeat task every 10 minutes" for "Indefinitely". Action: program `python`, arguments `tracker.py`, start in = the arenal-audit folder.
