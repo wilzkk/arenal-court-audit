@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Empty Court Audit</title>
+<style>
+:root { --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#6b7280; --line:#e5e7eb; --accent:#1d4ed8; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --card:#181b21; --ink:#e8eaed; --muted:#9aa0a6; --line:#2a2f37; --accent:#7aa2ff; } }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+main { max-width:1000px; margin:0 auto; padding:32px 16px; }
+h1 { margin:0 0 4px; font-size:26px; } h2 { margin:0 0 12px; font-size:20px; } h3 { font-size:14px; margin:0 0 8px; color:var(--muted); font-weight:600; }
+.muted { color:var(--muted); font-weight:400; font-size:14px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin:20px 0; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin:12px 0 20px; }
+.kpi { border:1px solid var(--line); border-radius:10px; padding:12px; }
+.kpi .label { color:var(--muted); font-size:13px; } .kpi .value { font-size:24px; font-weight:700; } .kpi .sub { color:var(--accent); font-size:14px; font-weight:600; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
+table { width:100%; border-collapse:collapse; font-size:14px; } th, td { text-align:left; padding:6px 4px; border-bottom:1px solid var(--line); } th { color:var(--muted); font-weight:600; }
+.pitch { font-size:16px; background:color-mix(in srgb, var(--accent) 10%, transparent); padding:10px 12px; border-radius:8px; }
+footer { color:var(--muted); font-size:13px; }
+</style></head><body><main>
+<h1>Empty court audit</h1>
+<div class="muted">Tracked: 10 Oct 14:57 to 10 Oct 14:57 (0.0 days, 1 checks, 0 with errors, 0 gaps over 30 min)</div>
+
+<section class="card">
+  <h2>Arenal Grimbergen <span class="muted">7 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<section class="card">
+  <h2>Arenal Meise <span class="muted">8 indoor courts</span></h2>
+  
+  <div class="kpis"><div class="kpi"><div class="label">Empty peak court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Cancelled and never rebooked</div><div class="value">0 h</div><div class="sub">EUR 0</div></div><div class="kpi"><div class="label">Rebook rate after cancellation</div><div class="value">n/a</div><div class="sub"></div></div><div class="kpi"><div class="label">All empty court time</div><div class="value">0 h</div><div class="sub">EUR 0</div></div></div>
+  <div class="grid">
+    <div><h3>When cancellations happen</h3>
+      <table><tr><th>Before start</th><th>Court time</th></tr><tr><td colspan=2>none yet</td></tr></table>
+      </div>
+    <div><h3>Empty court time by day</h3>
+      <table><tr><th>Day</th><th>Peak</th><th>Off-peak</th></tr><tr><td colspan=3>none yet</td></tr></table></div>
+    <div><h3>Most often empty peak hours</h3>
+      <table><tr><th>Slot</th><th>Empty</th></tr><tr><td colspan=2>none yet</td></tr></table></div>
+  </div>
+</section>
+<footer><p>Method: public availability checked every 10 minutes. "Cancelled" means court time that was booked and became bookable again.
+"Empty" means court time still unbooked when it started. Indoor courts only; outdoor courts are excluded.
+Values use Meise's published indoor doubles rates for 4 players (peak EUR 32/h, off-peak EUR 20/h).
+Cancellations rebooked between two checks are not visible, so the rebook rate is a lower bound.</p></footer>
+</main></body></html>
