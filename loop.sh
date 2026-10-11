@@ -16,7 +16,7 @@ git config user.email "court-audit-bot@users.noreply.github.com"
 save() {
   python3 report.py > /dev/null || echo "report failed"
   python3 persist.py dump
-  git add data/audit.sql report.html
+  git add data/audit.sql report.html directie.html
   if ! git diff --cached --quiet; then
     git commit -q -m "data $(date -u +%Y-%m-%dT%H:%MZ)"
     git push -q || { git pull -q --rebase && git push -q; } || echo "push failed, will retry at next save"

@@ -4,12 +4,12 @@ Tracks public padel court availability at Arenal Meise and Arenal Grimbergen for
 
 ## Current setup: runs on GitHub
 
-This repo runs itself: `.github/workflows/track.yml` runs `loop.sh`, which checks availability every 15 minutes for about 5h40m and then starts the next run, until 24 Oct 2026 12:00 (`AUDIT_STOP`). An hourly schedule restarts the chain if it ever breaks. It tracks every Arenal club with padel (the list is read from Arenal once a day), indoor courts only. Data stays on the runner between checks and is saved to `data/audit.sql`, with `report.html` refreshed, every hour, which keeps the repo small. Public repo, so GitHub Actions minutes are free. Nothing needs to run on your computer. The steps below are only needed to run it yourself instead.
+This repo runs itself: `.github/workflows/track.yml` runs `loop.sh`, which checks availability every 15 minutes for about 5h40m and then starts the next run, until 24 Oct 2026 12:00 (`AUDIT_STOP`). An hourly schedule restarts the chain if it ever breaks. It tracks every Arenal club with padel (the list is read from Arenal once a day), indoor courts only. Data stays on the runner between checks and is saved to `data/audit.sql`, with `report.html` and `directie.html` refreshed, every hour, which keeps the repo small. Public repo, so GitHub Actions minutes are free. Nothing needs to run on your computer. The steps below are only needed to run it yourself instead.
 
 ## Files
 
 - `tracker.py` checks availability (next 14 days, both clubs) and logs changes to `arenal_audit.db`. Run it every 10 minutes.
-- `report.py` reads the database and writes `report.html` (the pitch numbers) and `events.csv` (raw data).
+- `report.py` reads the database and writes `report.html` (all numbers, per club), `directie.html` (a one-page Dutch version for Arenal's management: headline, ranking, empty-court heatmap, cancellations, scenarios) and `events.csv` (raw data).
 
 No packages needed, Python 3.9 or newer. On Windows, also run `pip install tzdata` once.
 
@@ -52,7 +52,8 @@ Open `report.html`. Projections per month appear once there are 3+ days of data.
 - **booked**: free court time got booked.
 - **expired_empty**: court time reached its start while still free, i.e. unsold.
 - The first time a date is seen is the baseline, so day one doesn't count as cancellations.
-- Revenue uses Meise's published indoor doubles prices for 4 players: peak EUR 32/hour (weekdays 17-23, weekends 10-18), off-peak EUR 20/hour. Edit `PRICES` and `PEAK` at the top of `report.py` if Grimbergen differs.
+- Revenue uses each club's indoor doubles price for 4 players (`CLUB_PRICES` in `report.py`, per person per hour as on the club's price page, Oct 2026). Most clubs: peak EUR 8, off-peak EUR 5 pp; Brugge EUR 7 peak; the Dutch clubs EUR 8.50 peak. Verrebroek, Roeselare, Terneuzen and Knokke had no indoor price online and are marked "aanname" (assumed). Peak hours are Meise's for every club (weekdays 17-23, weekends 10-18), see `PEAK`.
+- Rebook rate = rebooked / (rebooked + stayed empty). Cancellations whose start time hasn't passed yet are "still open" and reported separately, and the rate is shown only once 2 h of cancellations are resolved, so a club with one quick rebook doesn't show 100%.
 - A cancellation that gets rebooked within 10 minutes is invisible, so the real cancellation volume is somewhat higher than reported.
 
 To add another Arenal club, add it to `CLUBS` in `tracker.py` (Antwerpen 14, Bree 11, Brugge 2, Hoogerheide 7, Kerkrade 8, Knokke 15, Lommel 9; the others are listed by `https://api.arenal.be/api/clubs`).
