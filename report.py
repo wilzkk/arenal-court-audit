@@ -118,8 +118,9 @@ def analyse(clubs, events, courts):
             name=name, courts=len(courts.get(club_id, ())),
             opened=0, opened_peak=0,
             refilled=0, refilled_peak=0, refill_minutes=[],
-            cancel_lost=0, cancel_lost_peak=0, cancel_lost_eur=0.0,
-            late_refills=0, late_refills_eur=0.0,
+            cancel_lost=0, cancel_lost_peak=0, cancel_lost_eur=0.0, cancel_lost_peak_eur=0.0,
+            late_refills=0, late_refills_eur=0.0, late_refills_peak=0, late_refills_peak_eur=0.0,
+            lead_peak=defaultdict(int),
             empty=0, empty_peak=0, empty_eur=0.0, empty_peak_eur=0.0,
             lead=defaultdict(int),
             empty_by_day=defaultdict(lambda: [0, 0]),    # weekday -> [peak, offpeak] blocks
@@ -151,6 +152,8 @@ def analyse(clubs, events, courts):
                           "8 - 24 h" if lead_h > REFUND_CUTOFF_H else
                           "< 8 h (not refunded)")
                 m["lead"][bucket] += 1
+                if peak:
+                    m["lead_peak"][bucket] += 1
 
                 nxt = evs[i + 1] if i + 1 < len(evs) else None
                 if nxt is None:
@@ -165,10 +168,15 @@ def analyse(clubs, events, courts):
                         # Late cancellation is not refunded, so a refill is paid twice.
                         m["late_refills"] += 1
                         m["late_refills_eur"] += price(club_id, block)
+                        if peak:
+                            m["late_refills_peak"] += 1
+                            m["late_refills_peak_eur"] += price(club_id, block)
                 elif nxt["type"] == "expired_empty":
                     m["cancel_lost"] += 1
                     m["cancel_lost_peak"] += peak
                     m["cancel_lost_eur"] += price(club_id, block)
+                    if peak:
+                        m["cancel_lost_peak_eur"] += price(club_id, block)
         res[club_id] = m
     return res
 
@@ -345,7 +353,24 @@ Cancellations rebooked between two checks are not visible, so the rebook rate is
 # ---------------------------------------------------------------- directie (Dutch, for management)
 DAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"]
 DAGEN_LANG = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
-HEAT_HOURS = range(7, 24)   # 07:00-24:00, the hours Arenal courts can be booked
+HEAT_HOURS = range(min(lo for lo, _ in PEAK.values()), max(hi for _, hi in PEAK.values()))
+
+
+def peak_view(m):
+    """The club's metrics restricted to peak hours: off-peak empty time is expected, not a loss."""
+    v = dict(m)
+    v.update(
+        empty=m["empty_peak"], empty_eur=m["empty_peak_eur"], empty_slots=m["empty_peak_slots"],
+        opened=m["opened_peak"], refilled=m["refilled_peak"], pending=m["pending_peak"],
+        cancel_lost=m["cancel_lost_peak"], cancel_lost_eur=m["cancel_lost_peak_eur"],
+        lead=m["lead_peak"], late_refills=m["late_refills_peak"],
+        late_refills_eur=m["late_refills_peak_eur"],
+    )
+    return v
+
+
+def is_peak_slot(weekday, hour):
+    return is_peak(datetime(2026, 1, 5 + weekday, hour))   # 5 Jan 2026 is a Monday
 
 
 def eur_nl(x):
@@ -372,6 +397,7 @@ def hour_counts(cov):
 
 def write_directie(res, cov, path):
     esc = html.escape
+    res = {cid: peak_view(m) for cid, m in res.items()}
     days = cov["days"] if cov else 0
     mult = 30 / days if days >= 3 else None
     clubs = sorted(res.items(), key=lambda kv: -kv[1]["empty_peak_eur"])
@@ -387,6 +413,9 @@ def write_directie(res, cov, path):
         "empty", "empty_eur", "empty_peak", "empty_peak_eur", "opened", "refilled",
         "cancel_lost", "cancel_lost_eur", "pending", "courts", "late_refills", "late_refills_eur")}
     tot_rate = rebook_rate(tot)
+    peak_hours_seen = sum(n for (d, h), n in counts.items() if is_peak_slot(d, h))
+    capacity = peak_hours_seen * 2 * tot["courts"]          # blocks of peak court time measured
+    empty_share = min(tot["empty_peak"] / capacity * 100, 100) if capacity else None
 
     # -- status line
     if not cov:
@@ -416,11 +445,11 @@ def write_directie(res, cov, path):
     tiles = [
         ("Lege piekuren", amount(tot["empty_peak_eur"]),
          f"{num_nl(hours(tot['empty_peak'] * (mult or 1)), 0)} uur piste {unit}"),
-        ("Alle lege uren", amount(tot["empty_eur"]),
-         f"{num_nl(hours(tot['empty'] * (mult or 1)), 0)} uur piste {unit}"),
-        ("Geannuleerd en niet herboekt", amount(tot["cancel_lost_eur"]),
+        ("Piekcapaciteit leeg", f"{empty_share:.0f}%" if empty_share is not None else "-",
+         f"van {num_nl(hours(capacity), 0)} uur piekcapaciteit gemeten"),
+        ("Geannuleerde piekuren niet herboekt", amount(tot["cancel_lost_eur"]),
          f"{num_nl(hours(tot['cancel_lost'] * (mult or 1)), 0)} uur, terugbetaald aan de speler"),
-        ("Herboekt na annulering", f"{tot_rate:.0f}%" if tot_rate is not None else "nog te vroeg",
+        ("Herboekt na annulering in piekuren", f"{tot_rate:.0f}%" if tot_rate is not None else "nog te vroeg",
          f"van {num_nl(hours(tot['refilled'] + tot['cancel_lost']))} u afgehandeld, "
          f"{num_nl(hours(tot['pending']))} u nog open"),
     ]
@@ -449,15 +478,17 @@ def write_directie(res, cov, path):
             cells.append(f'<div class="hm-d">{DAGEN[d]}</div>')
             for h in HEAT_HOURS:
                 n = counts.get((d, h), 0)
-                peak = is_peak(datetime(2026, 1, 5 + d, h))   # 5 Jan 2026 is a Monday
-                cls = "hm-c" + (" pk" if peak else "")
+                if not is_peak_slot(d, h):
+                    cells.append('<div class="hm-c off"></div>')
+                    continue
+                cls = "hm-c"
                 if not n or not total_courts:
                     cells.append(f'<div class="{cls} na" data-tip="{DAGEN_LANG[d]} {h:02d}:00: niet gemeten"></div>')
                     continue
                 avg = hours(slots.get((d, h), 0)) / n
                 share = min(avg / total_courts, 1)
                 label = f"{share * 100:.0f}" if share >= 0.25 else ""
-                tip = (f"{DAGEN_LANG[d]} {h:02d}:00-{h + 1:02d}:00{' (piekuur)' if peak else ''}: "
+                tip = (f"{DAGEN_LANG[d]} {h:02d}:00-{h + 1:02d}:00: "
                        f"gemiddeld {num_nl(avg)} van {total_courts} pistes leeg ({share * 100:.0f}%)")
                 ink = " dark" if share >= 0.55 else ""
                 cells.append(f'<div class="{cls}{ink}" style="--a:{share:.3f}" data-tip="{esc(tip)}">{label}</div>')
@@ -500,7 +531,7 @@ def write_directie(res, cov, path):
     if n_lead:
         early = (lead_tot["> 24 h"] + lead_tot["8 - 24 h"]) / n_lead * 100
         canc_notes.append(
-            f"<b>{early:.0f}%</b> van de geannuleerde speeltijd wordt meer dan {REFUND_CUTOFF_H} uur vooraf "
+            f"<b>{early:.0f}%</b> van de geannuleerde piekuren wordt meer dan {REFUND_CUTOFF_H} uur vooraf "
             f"geannuleerd. Die speler krijgt zijn geld terug, dus elk uur dat daarna niet opnieuw verkocht "
             f"wordt, is echt verlies. {lead_tot['> 24 h'] / n_lead * 100:.0f}% komt zelfs meer dan een dag "
             f"vooraf vrij: genoeg tijd om de piste opnieuw aan te bieden.")
@@ -527,7 +558,6 @@ def write_directie(res, cov, path):
     # -- prices
     price_rows = "".join(
         f"<tr><td>{esc(m['name'])}</td><td class='num'>{num_nl(CLUB_PRICES.get(cid, DEFAULT_PRICE)[0] * PLAYERS, 0)}</td>"
-        f"<td class='num'>{num_nl(CLUB_PRICES.get(cid, DEFAULT_PRICE)[1] * PLAYERS, 0)}</td>"
         f"<td>{CLUB_PRICES.get(cid, DEFAULT_PRICE)[2]}</td></tr>"
         for cid, m in sorted(clubs, key=lambda kv: kv[1]["name"]))
     wk, we = PEAK["weekday"], PEAK["weekend"]
@@ -585,8 +615,9 @@ section {{ background:var(--card); border:1px solid var(--line); border-radius:1
 .controls {{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin:10px 0 12px; }}
 select {{ font:inherit; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 10px; }}
 .scale {{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink2); }}
+.scale .nm {{ display:inline-block; width:14px; height:10px; border-radius:2px; margin-left:8px;
+  background:repeating-linear-gradient(45deg, transparent 0 3px, var(--line) 3px 4px); box-shadow:inset 0 0 0 1px var(--line); }}
 .scale .grad {{ width:120px; height:10px; border-radius:2px; background:linear-gradient(90deg, var(--track), var(--blue)); }}
-.scale .pk {{ display:inline-block; width:14px; height:10px; border-radius:2px; box-shadow:inset 0 0 0 1.5px var(--ink2); }}
 .scroll {{ overflow-x:auto; }}
 .hm {{ display:grid; grid-template-columns:30px repeat({len(HEAT_HOURS)}, minmax(26px, 1fr)); gap:2px; min-width:520px; }}
 .hm[hidden] {{ display:none; }}
@@ -596,7 +627,7 @@ select {{ font:inherit; color:var(--ink); background:var(--card); border:1px sol
   font-variant-numeric:tabular-nums; color:var(--ink);
   background:color-mix(in srgb, var(--blue) calc(var(--a, 0) * 100%), var(--track)); }}
 .hm-c.dark {{ color:#fff; }}
-.hm-c.pk {{ box-shadow:inset 0 0 0 1.5px var(--ink2); }}
+.hm-c.off {{ background:none; }}
 .hm-c.na {{ background:repeating-linear-gradient(45deg, transparent 0 3px, var(--line) 3px 4px); }}
 table {{ width:100%; border-collapse:collapse; font-size:14px; }}
 th, td {{ text-align:left; padding:7px 4px; border-bottom:1px solid var(--line); }}
@@ -627,17 +658,17 @@ footer {{ color:var(--muted); font-size:13px; margin-top:24px; }}
 
 <section>
   <h2>Wanneer staan de pistes leeg?</h2>
-  <p class="sub">Gemiddeld aandeel indoorpistes dat leeg bleef, per weekdag en uur. Omrande vakjes zijn piekuren.</p>
+  <p class="sub">Gemiddeld aandeel indoorpistes dat leeg bleef, per weekdag en piekuur. Lege vakjes zijn daluren en tellen niet mee.</p>
   <div class="controls">
     <select id="club" aria-label="Club">{options}</select>
-    <div class="scale"><span>0%</span><span class="grad"></span><span>100% leeg</span><span class="pk"></span><span>piekuur</span></div>
+    <div class="scale"><span>0%</span><span class="grad"></span><span>100% leeg</span><span class="nm"></span><span>nog niet gemeten</span></div>
   </div>
   <div class="scroll">{heatmaps}</div>
 </section>
 
 <section>
-  <h2>Wat gebeurt er met geannuleerde speeltijd?</h2>
-  <p class="sub">Uren die geboekt waren en weer vrijkwamen, per club.</p>
+  <h2>Wat gebeurt er met geannuleerde piekuren?</h2>
+  <p class="sub">Piekuren die geboekt waren en weer vrijkwamen, per club.</p>
   {canc_html}
 </section>
 
@@ -654,6 +685,7 @@ footer {{ color:var(--muted); font-size:13px; margin-top:24px; }}
       <li><b>Leeg</b>: een piste die nog vrij was toen het speeluur begon. Zeker niet verkocht.</li>
       <li><b>Geannuleerd</b>: geboekte speeltijd die weer vrij kwam. Herboekt binnen 15 minuten is onzichtbaar, dus het echte aantal annuleringen ligt hoger.</li>
       <li>Piekuren: weekdagen {wk[0]}-{wk[1]} u, weekend {we[0]}-{we[1]} u (zoals in Meise), voor elke club.</li>
+      <li>Alleen piekuren tellen mee: dat leeg blijven in daluren is normaal en weinig verlies.</li>
       <li>Buitenpistes tellen niet mee. De uren zijn exact, de bedragen hangen af van de tarieven hiernaast.</li>
     </ul>
   </div>
@@ -661,8 +693,8 @@ footer {{ color:var(--muted); font-size:13px; margin-top:24px; }}
 
 <section>
   <h2>Gebruikte tarieven</h2>
-  <p class="sub">Indoor dubbel, per piste per uur (4 spelers). "website" = prijs van de clubpagina, "aanname" = geen indoorprijs gevonden.</p>
-  <div class="scroll"><table><tr><th>Club</th><th class="num">Piek</th><th class="num">Dal</th><th>Bron</th></tr>{price_rows}</table></div>
+  <p class="sub">Piektarief indoor dubbel, per piste per uur (4 spelers). "website" = prijs van de clubpagina, "aanname" = geen indoorprijs gevonden.</p>
+  <div class="scroll"><table><tr><th>Club</th><th class="num">Piek</th><th>Bron</th></tr>{price_rows}</table></div>
 </section>
 
 <footer>Bedragen zijn verhuur aan de standaardprijs, zonder kortingen of abonnementen. Bijgewerkt {datetime.now(TZ):%d/%m/%Y %H:%M}.</footer>
