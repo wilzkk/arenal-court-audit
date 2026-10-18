@@ -19,7 +19,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from tracker import DB_PATH, TZ, connect
+from tracker import BLOCK, DB_PATH, TZ, connect
 
 OUT_DIR = Path(__file__).parent
 
@@ -381,17 +381,21 @@ def num_nl(x, d=1):
     return f"{x:,.{d}f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
 
-def hour_counts(cov):
-    """How often each (weekday, hour) passed while tracking, to average the heatmap."""
+def halfhour_counts(cov):
+    """How many 30-minute blocks per (weekday, hour) started while tracking.
+
+    Counted exactly like expired_empty blocks (start after the first check, at or
+    before the last), so a partly passed hour weighs the same on both sides.
+    """
     counts = defaultdict(int)
     if not cov:
         return counts
     t = cov["first"].replace(minute=0, second=0, microsecond=0)
-    if t < cov["first"]:
-        t += timedelta(hours=1)
-    while t + timedelta(hours=1) <= cov["last"]:   # whole hours only
+    while t <= cov["first"]:
+        t += BLOCK
+    while t <= cov["last"]:
         counts[(t.weekday(), t.hour)] += 1
-        t += timedelta(hours=1)
+        t += BLOCK
     return counts
 
 
@@ -402,7 +406,7 @@ def write_directie(res, cov, path):
     mult = 30 / days if days >= 3 else None
     clubs = sorted(res.items(), key=lambda kv: -kv[1]["empty_peak_eur"])
     ms = [m for _, m in clubs]
-    counts = hour_counts(cov)
+    counts = halfhour_counts(cov)
     weekdays_seen = sorted({wd for wd, _h in counts})
 
     def amount(x):
@@ -413,8 +417,7 @@ def write_directie(res, cov, path):
         "empty", "empty_eur", "empty_peak", "empty_peak_eur", "opened", "refilled",
         "cancel_lost", "cancel_lost_eur", "pending", "courts", "late_refills", "late_refills_eur")}
     tot_rate = rebook_rate(tot)
-    peak_hours_seen = sum(n for (d, h), n in counts.items() if is_peak_slot(d, h))
-    capacity = peak_hours_seen * 2 * tot["courts"]          # blocks of peak court time measured
+    capacity = sum(n for (d, h), n in counts.items() if is_peak_slot(d, h)) * tot["courts"]   # blocks
     empty_share = min(tot["empty_peak"] / capacity * 100, 100) if capacity else None
 
     # -- status line
@@ -485,7 +488,7 @@ def write_directie(res, cov, path):
                 if not n or not total_courts:
                     cells.append(f'<div class="{cls} na" data-tip="{DAGEN_LANG[d]} {h:02d}:00: niet gemeten"></div>')
                     continue
-                avg = hours(slots.get((d, h), 0)) / n
+                avg = slots.get((d, h), 0) / n     # empty blocks per measured block = courts empty
                 share = min(avg / total_courts, 1)
                 label = f"{share * 100:.0f}" if share >= 0.25 else ""
                 tip = (f"{DAGEN_LANG[d]} {h:02d}:00-{h + 1:02d}:00: "
