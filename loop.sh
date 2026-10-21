@@ -19,10 +19,20 @@ save() {
   git add data/audit.sql report.html directie.html
   if ! git diff --cached --quiet; then
     git commit -q -m "data $(date -u +%Y-%m-%dT%H:%MZ)"
-    git push -q || { git pull -q --rebase && git push -q; } || echo "push failed, will retry at next save"
+    git push -q && return
+    if git pull -q --rebase; then
+      git push -q && return
+    else
+      git rebase --abort 2>/dev/null   # never leave the checkout stuck mid-rebase
+    fi
+    echo "push failed, will retry at next save"
   fi
 }
 
+# A queued run is checked out at the commit from when it was queued, which can be
+# hours behind the data the previous run saved. Start from the latest data.
+git fetch -q origin main && git reset -q --hard FETCH_HEAD \
+  || echo "could not update to the latest main, using the checkout"
 python3 persist.py load
 
 n=0
