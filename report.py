@@ -53,6 +53,7 @@ PEAK = {
 
 REFUND_CUTOFF_H = 8      # Arenal refunds cancellations made > 8 h before start
 MIN_RESOLVED_BLOCKS = 4  # show a rebook rate only once 2 h of cancellations are resolved
+GAP_TOLERANCE = timedelta(minutes=30)   # court time not checked for longer than this is unverified
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
@@ -106,8 +107,16 @@ def load(conn):
     return clubs, events, runs, courts
 
 
-def analyse(clubs, events, courts):
-    """Per club metrics."""
+def is_blind(t, blind):
+    return any(lo < t <= hi for lo, hi in blind)
+
+
+def analyse(clubs, events, courts, blind=()):
+    """Per club metrics.
+
+    Court time that started inside a blind window (no successful check for over
+    GAP_TOLERANCE) may have been booked unseen, so it is not counted as empty.
+    """
     by_key = defaultdict(list)          # (club, court, block) -> events in order
     for e in events:
         by_key[(e["club_id"], e["court_id"], e["block_start"])].append(e)
@@ -132,8 +141,9 @@ def analyse(clubs, events, courts):
             if cid != club_id:
                 continue
             peak = is_peak(block)
+            unverified = is_blind(block, blind)
             for i, e in enumerate(evs):
-                if e["type"] == "expired_empty":
+                if e["type"] == "expired_empty" and not unverified:
                     m["empty"] += 1
                     m["empty_eur"] += price(club_id, block)
                     m["empty_by_day"][block.weekday()][0 if peak else 1] += 1
@@ -156,7 +166,7 @@ def analyse(clubs, events, courts):
                     m["lead_peak"][bucket] += 1
 
                 nxt = evs[i + 1] if i + 1 < len(evs) else None
-                if nxt is None:
+                if nxt is None or (nxt["type"] == "expired_empty" and unverified):
                     m["pending"] += 1
                     m["pending_peak"] += peak
                 elif nxt["type"] == "booked":
@@ -187,8 +197,14 @@ def coverage(runs):
     gaps = [(a, b) for (a, _), (b, _) in zip(runs, runs[1:]) if b - a > timedelta(minutes=30)]
     first, last = runs[0][0], runs[-1][0]
     days = max((last - first).total_seconds() / 86400, 1e-9)
+    # Blind windows: from GAP_TOLERANCE after a successful check until the next one,
+    # when checks were missing or failing (e.g. Arenal's API down).
+    ok = [t for t, good in runs if good]
+    blind = [(a + GAP_TOLERANCE, b) for a, b in zip(ok, ok[1:]) if b - a > GAP_TOLERANCE]
+    if ok and last - ok[-1] > GAP_TOLERANCE:
+        blind.append((ok[-1] + GAP_TOLERANCE, last))
     return dict(first=first, last=last, n=len(runs), days=days,
-                failed=sum(1 for _, ok in runs if not ok), gaps=gaps)
+                failed=sum(1 for _, ok in runs if not ok), gaps=gaps, blind=blind)
 
 
 def summary_lines(m, cov):
@@ -386,17 +402,19 @@ def halfhour_counts(cov):
 
     Counted exactly like expired_empty blocks (start after the first check, at or
     before the last), so a partly passed hour weighs the same on both sides.
+    Blocks in a blind window are left out here as they are from the empty counts;
+    they are returned apart, per (weekday, hour), to report what was left out.
     """
-    counts = defaultdict(int)
+    counts, blind = defaultdict(int), defaultdict(int)
     if not cov:
-        return counts
+        return counts, blind
     t = cov["first"].replace(minute=0, second=0, microsecond=0)
     while t <= cov["first"]:
         t += BLOCK
     while t <= cov["last"]:
-        counts[(t.weekday(), t.hour)] += 1
+        (blind if is_blind(t, cov["blind"]) else counts)[(t.weekday(), t.hour)] += 1
         t += BLOCK
-    return counts
+    return counts, blind
 
 
 def write_directie(res, cov, path):
@@ -406,7 +424,12 @@ def write_directie(res, cov, path):
     mult = 30 / days if days >= 3 else None
     clubs = sorted(res.items(), key=lambda kv: -kv[1]["empty_peak_eur"])
     ms = [m for _, m in clubs]
-    counts = halfhour_counts(cov)
+    counts, blind_counts = halfhour_counts(cov)
+    peak_seen = sum(n for (d, h), n in counts.items() if is_peak_slot(d, h))
+    blind_peak = sum(n for (d, h), n in blind_counts.items() if is_peak_slot(d, h))
+    blind_peak_h = hours(blind_peak)
+    if mult and peak_seen:
+        mult *= (peak_seen + blind_peak) / peak_seen    # project from the peak time actually measured
     weekdays_seen = sorted({wd for wd, _h in counts})
 
     def amount(x):
@@ -417,7 +440,7 @@ def write_directie(res, cov, path):
         "empty", "empty_eur", "empty_peak", "empty_peak_eur", "opened", "refilled",
         "cancel_lost", "cancel_lost_eur", "pending", "courts", "late_refills", "late_refills_eur")}
     tot_rate = rebook_rate(tot)
-    capacity = sum(n for (d, h), n in counts.items() if is_peak_slot(d, h)) * tot["courts"]   # blocks
+    capacity = peak_seen * tot["courts"]   # blocks of peak court time measured
     empty_share = min(tot["empty_peak"] / capacity * 100, 100) if capacity else None
 
     # -- status line
@@ -435,6 +458,9 @@ def write_directie(res, cov, path):
         else:
             status = ""
         period_txt = f"Gemeten van {period} ({num_nl(days)} dagen, {cov['n']} metingen)."
+        if blind_peak_h:
+            period_txt += (f" {num_nl(blind_peak_h)} uur piek zonder meting (storing) "
+                           f"telt niet mee.")
 
     # -- headline
     if mult:
@@ -689,6 +715,8 @@ footer {{ color:var(--muted); font-size:13px; margin-top:24px; }}
       <li><b>Geannuleerd</b>: geboekte speeltijd die weer vrij kwam. Herboekt binnen 15 minuten is onzichtbaar, dus het echte aantal annuleringen ligt hoger.</li>
       <li>Piekuren: weekdagen {wk[0]}-{wk[1]} u, weekend {we[0]}-{we[1]} u (zoals in Meise), voor elke club.</li>
       <li>Alleen piekuren tellen mee: dat leeg blijven in daluren is normaal en weinig verlies.</li>
+      <li>Halfuren waarin niet gemeten kon worden (storing bij Arenal of de meting), tellen niet mee:
+        niet als leeg en niet als gemeten capaciteit.</li>
       <li>Buitenpistes tellen niet mee. De uren zijn exact, de bedragen hangen af van de tarieven hiernaast.</li>
     </ul>
   </div>
@@ -729,7 +757,7 @@ def main():
     conn = connect(DB_PATH)
     clubs, events, runs, courts = load(conn)
     cov = coverage(runs)
-    res = analyse(clubs, events, courts)
+    res = analyse(clubs, events, courts, cov["blind"] if cov else ())
     if cov:
         print(f"Tracked {cov['days']:.1f} days, {cov['n']} checks "
               f"({cov['failed']} with errors, {len(cov['gaps'])} gaps over 30 min)\n")

@@ -54,6 +54,7 @@ Open `report.html`. Projections per month appear once there are 3+ days of data.
 - The first time a date is seen is the baseline, so day one doesn't count as cancellations.
 - Revenue uses each club's indoor doubles price for 4 players (`CLUB_PRICES` in `report.py`, per person per hour as on the club's price page, Oct 2026). Most clubs: peak EUR 8, off-peak EUR 5 pp; Brugge EUR 7 peak; the Dutch clubs EUR 8.50 peak. Verrebroek, Roeselare, Terneuzen and Knokke had no indoor price online and are marked "aanname" (assumed). Peak hours are Meise's for every club (weekdays 17-23, weekends 10-18), see `PEAK`.
 - Rebook rate = rebooked / (rebooked + stayed empty). Cancellations whose start time hasn't passed yet are "still open" and reported separately, and the rate is shown only once 2 h of cancellations are resolved, so a club with one quick rebook doesn't show 100%.
+- Court time that started while no check succeeded for over 30 minutes (a gap, or Arenal's API down) may have been booked unseen, so it counts neither as empty nor as measured time. Monthly figures are projected from the peak time actually measured.
 - A cancellation that gets rebooked within 10 minutes is invisible, so the real cancellation volume is somewhat higher than reported.
 
 To add another Arenal club, add it to `CLUBS` in `tracker.py` (Antwerpen 14, Bree 11, Brugge 2, Hoogerheide 7, Kerkrade 8, Knokke 15, Lommel 9; the others are listed by `https://api.arenal.be/api/clubs`).
